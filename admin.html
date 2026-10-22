@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#0b101d">
+<script>(function(){try{var t=localStorage.getItem("lbdn_theme")||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");document.documentElement.dataset.theme=t}catch(e){document.documentElement.dataset.theme="dark"}})()</script>
+<title>Sign in — Living by Design Nation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="icon" type="image/png" href="assets/logo.png">
+<link rel="apple-touch-icon" href="assets/logo.png">
+<link rel="stylesheet" href="styles.css">
+</head><body class="admin">
+<div class="admin-shell">
+  <section id="login" class="login-card">
+    <img class="admin-logo" src="assets/logo.png" alt="">
+    <h2>Sign in</h2>
+    <p class="tiny dimmed">Admins and referral marketers</p>
+    <form id="loginForm">
+      <input id="uname" placeholder="Username (marketers: your code)" required autocomplete="username" autocapitalize="off">
+      <input type="password" id="pw" placeholder="Password" required autocomplete="current-password">
+      <button class="btn btn-gold w100" id="loginBtn" type="submit">Sign in</button>
+    </form>
+    <p class="tiny dimmed login-foot">Password-protected · sessions expire after 6 hours</p>
+    <a class="tiny back-link" href="index.html">← Back to site</a>
+  </section>
+
+  <section id="dash" hidden>
+    <div class="dash-head">
+      <div><h2 id="dashTitle">Dashboard</h2><p class="tiny dimmed" id="who"></p></div>
+      <div class="acts">
+        <button class="mini" id="refresh"><span class="rr">↻</span> Refresh</button>
+        <button class="mini admin-only" id="csv">⬇ Export orders</button>
+        <button class="mini" id="pwToggle">🔑 Change password</button>
+        <button class="mini" id="logout">Log out</button>
+      </div>
+    </div>
+
+    <div class="panel" id="pwPanel" hidden>
+      <h3>Change password</h3>
+      <form class="row" id="pwForm">
+        <input type="password" id="oldPw" placeholder="Current password" required autocomplete="current-password">
+        <input type="password" id="newPw" placeholder="New password (8+ characters)" required autocomplete="new-password">
+        <button class="btn btn-gold btn-sm" type="submit">Update</button>
+      </form>
+    </div>
+
+    <div class="panel" id="credBox" hidden>
+      <h3>Marketer login details <span class="tiny dimmed">— shown once, send them privately</span></h3>
+      <pre id="credText" class="cred"></pre>
+      <button class="mini" id="credCopy">Copy message</button>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><div class="v" id="sClicks">0</div><div class="l">Referral clicks</div></div>
+      <div class="stat"><div class="v" id="sSold">0</div><div class="l">Books sold</div></div>
+      <div class="stat"><div class="v" id="sRev">₦0</div><div class="l">Revenue</div></div>
+      <div class="stat"><div class="v" id="sTop" style="font-size:19px">—</div><div class="l" id="sTopL">Top marketer</div></div>
+    </div>
+
+    <div class="panel mkt-only" hidden><h3>Your referral link</h3>
+      <div class="row"><input id="myLink" readonly><button class="btn btn-gold btn-sm" id="myCopy">Copy link</button></div></div>
+
+    <div class="panel admin-only"><h3>Add a marketer</h3>
+      <div class="row"><input id="mName" placeholder="Marketer's name"><button class="btn btn-gold btn-sm" id="addM">Create link &amp; login</button></div></div>
+    <div class="panel admin-only"><h3>Marketers</h3><div class="table-scroll"><table><thead><tr><th>Marketer</th><th>Code / username</th><th>Link</th><th>Clicks</th><th>Sold</th><th>Revenue</th><th></th></tr></thead><tbody id="mBody"></tbody></table></div></div>
+    <div class="panel"><h3 id="oTitle">Recent orders</h3><div class="table-scroll"><table><thead id="oHead"></thead><tbody id="oBody"></tbody></table></div></div>
+  </section>
+</div>
+
+<button class="theme-toggle admin-theme-toggle" id="themeToggle" type="button" aria-label="Switch between day and night theme" title="Day / night">
+  <svg class="i-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></svg>
+  <svg class="i-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></svg>
+</button>
+
+<div id="authOverlay" hidden>
+  <div class="auth-box" role="status" aria-live="polite">
+    <img class="auth-logo" src="assets/logo.png" alt="">
+    <h3 id="authTitle">Signing you in</h3>
+    <p class="tiny dimmed" id="authSub">Secure area · Living by Design Nation</p>
+    <ul class="auth-steps">
+      <li id="st1"><span class="ind"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 13l4 4 10-10"/></svg></span><span>Verifying credentials</span></li>
+      <li id="st2"><span class="ind"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 13l4 4 10-10"/></svg></span><span>Securing your session</span></li>
+      <li id="st3"><span class="ind"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 13l4 4 10-10"/></svg></span><span>Preparing your dashboard</span></li>
+    </ul>
+    <div class="auth-bar"><i id="authFill"></i></div>
+  </div>
+</div>
+<div id="toast"></div>
+<script src="config.js"></script><script src="script.js"></script>
+</body></html>
