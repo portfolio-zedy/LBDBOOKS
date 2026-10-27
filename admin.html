@@ -7,8 +7,11 @@
 <title>Sign in — Living by Design Nation</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="icon" type="image/png" href="assets/logo.png">
-<link rel="apple-touch-icon" href="assets/logo.png">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16.png">
+<link rel="shortcut icon" href="assets/favicon.ico">
+<link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon.png">
+<link rel="manifest" href="site.webmanifest">
 <link rel="stylesheet" href="styles.css">
 </head><body class="admin">
 <div class="admin-shell">
@@ -31,6 +34,7 @@
       <div class="acts">
         <button class="mini" id="refresh"><span class="rr">↻</span> Refresh</button>
         <button class="mini admin-only" id="csv">⬇ Export orders</button>
+        <button class="mini admin-only" id="reverify">✓ Verify pending</button>
         <button class="mini" id="pwToggle">🔑 Change password</button>
         <button class="mini" id="logout">Log out</button>
       </div>
@@ -52,14 +56,15 @@
     </div>
 
     <div class="stats">
-      <div class="stat"><div class="v" id="sClicks">0</div><div class="l">Referral clicks</div></div>
-      <div class="stat"><div class="v" id="sSold">0</div><div class="l">Books sold</div></div>
-      <div class="stat"><div class="v" id="sRev">₦0</div><div class="l">Revenue</div></div>
-      <div class="stat"><div class="v" id="sTop" style="font-size:19px">—</div><div class="l" id="sTopL">Top marketer</div></div>
+      <div class="stat"><div class="v" id="sClicks">0</div><div class="l" id="sClicksL">Referral clicks</div></div>
+      <div class="stat"><div class="v" id="sSold">0</div><div class="l" id="sSoldL">Books sold</div></div>
+      <div class="stat"><div class="v" id="sRev">₦0</div><div class="l" id="sRevL">Revenue</div><div class="sub" id="sRevSub" hidden></div></div>
+      <div class="stat"><div class="v" id="sTop">—</div><div class="l" id="sTopL">Top marketer</div></div>
     </div>
 
     <div class="panel mkt-only" hidden><h3>Your referral link</h3>
-      <div class="row"><input id="myLink" readonly><button class="btn btn-gold btn-sm" id="myCopy">Copy link</button></div></div>
+      <div class="row"><input id="myLink" readonly><button class="btn btn-gold btn-sm" id="myCopy">Copy link</button></div>
+      <div class="tier-strip" id="tierStrip" hidden></div></div>
 
     <div class="panel admin-only"><h3>Add a marketer</h3>
       <div class="row"><input id="mName" placeholder="Marketer's name"><button class="btn btn-gold btn-sm" id="addM">Create link &amp; login</button></div></div>
@@ -84,6 +89,40 @@
       <li id="st3"><span class="ind"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 13l4 4 10-10"/></svg></span><span>Preparing your dashboard</span></li>
     </ul>
     <div class="auth-bar"><i id="authFill"></i></div>
+  </div>
+</div>
+<!-- First-login onboarding: payout details -->
+<div id="obModal" class="ovl" hidden>
+  <div class="mbox" role="dialog" aria-modal="true" aria-labelledby="obTitle">
+    <h3 id="obTitle">Set up your payouts</h3>
+    <p class="tiny dimmed">Add the bank account your commissions are paid to, plus your contact details. You can update them anytime.</p>
+    <form id="obForm">
+      <input id="obEmail" type="email" placeholder="Email address" required autocomplete="email">
+      <input id="obPhone" placeholder="Phone (WhatsApp)" required autocomplete="tel">
+      <input id="obBank" placeholder="Bank name" required>
+      <input id="obAcct" placeholder="Account number" inputmode="numeric" required>
+      <input id="obAcctName" placeholder="Account name (as on the account)" required>
+      <button class="btn btn-gold w100" id="obSave" type="submit">Save details</button>
+    </form>
+    <button class="tiny skip" id="obSkip" type="button">I'll do this later</button>
+  </div>
+</div>
+
+<!-- Admin: marketer drill-down -->
+<div id="mkModal" class="ovl" hidden>
+  <div class="mbox" role="dialog" aria-modal="true" aria-labelledby="mkName">
+    <div class="mk-head">
+      <div><h3 id="mkName">—</h3><p class="tiny dimmed" id="mkMeta"></p></div>
+      <button class="mini" id="mkClose" type="button">✕</button>
+    </div>
+    <div class="mk-stats" id="mkStats"></div>
+    <div class="tier-strip" id="mkTier"></div>
+    <div class="mk-sec"><h4>Payout account</h4><div id="mkProfile" class="mk-profile"></div></div>
+    <div class="mk-sec"><h4>Commission by month</h4>
+      <div class="table-scroll"><table><thead><tr><th>Month</th><th>Books</th><th>Rate / book</th><th>Commission</th></tr></thead><tbody id="mkHist"></tbody></table></div>
+    </div>
+    <div class="mk-sec"><h4>Payouts recorded</h4><div id="mkPayouts"></div></div>
+    <div class="mk-actions"><button class="btn btn-gold btn-sm" id="mkPaid" type="button">Mark this month paid</button></div>
   </div>
 </div>
 <div id="toast"></div>

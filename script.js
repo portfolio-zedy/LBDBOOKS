@@ -65,7 +65,11 @@
 
   /* ---- Referral: validated against the Sheet, click counted once per session ---- */
   let ref = null;
-  const priceNow = () => fmt(C.PRICE * (Math.max(1, +$('fQty').value || 1)));
+  const unit = () => C.PRICE + (C.SHIPPING || 0);      // book + delivery, per copy
+  const qtyNow = () => Math.max(1, +$('fQty').value || 1);
+  const priceNow = () => fmt(unit() * qtyNow());
+  const breakNow = () => { const q = qtyNow(); const b = $('fBreak');
+    if (b) b.textContent = fmt(C.PRICE) + ' × ' + q + (q > 1 ? ' copies' : ' copy') + ' + ' + fmt(C.SHIPPING || 0) + ' delivery × ' + q; };
   function showRef(name){
     document.querySelectorAll('.price-text').forEach(e => e.textContent = fmt(C.PRICE));
     $('ctaDirect').hidden = true; $('ctaRef').hidden = false; $('stickyBuy').hidden = false;
@@ -83,15 +87,28 @@
     } catch (e) { /* offline: leave direct view */ }
   })();
 
+  /* ---- Delivery location: state → LGA cascade (window.NG_STATES from ng-states.js) ---- */
+  const fState = $('fState'), fLga = $('fLga');
+  if (fState && window.NG_STATES){
+    fState.innerHTML = '<option value="">Select state</option>' + window.NG_STATE_NAMES.map(s => '<option>' + s + '</option>').join('');
+    fState.addEventListener('change', () => {
+      const lg = window.NG_STATES[fState.value] || [];
+      fLga.disabled = !lg.length;
+      fLga.innerHTML = '<option value="">' + (lg.length ? 'Select LGA' : 'Select state first') + '</option>' + lg.map(l => '<option>' + l + '</option>').join('');
+    });
+  }
+  const modalSub = $('modalSub');
+  if (modalSub) modalSub.textContent = 'The Architecture of Influence · ' + fmt(C.PRICE) + ' + ' + fmt(C.SHIPPING || 0) + ' delivery per copy';
+
   /* ---- Buy flow ---- */
   const modal = $('buyModal');
-  const openBuy = () => { $('buyFormWrap').hidden = false; $('paySuccess').hidden = true; $('payBtn').disabled = false; $('fTotal').textContent = priceNow(); modal.classList.add('open'); };
+  const openBuy = () => { $('buyFormWrap').hidden = false; $('paySuccess').hidden = true; $('payBtn').disabled = false; $('fTotal').textContent = priceNow(); breakNow(); modal.classList.add('open'); };
   const closeBuy = () => modal.classList.remove('open');
   document.querySelectorAll('[data-buy]').forEach(b => b.addEventListener('click', openBuy));
   $('buyClose').onclick = $('doneBtn').onclick = closeBuy;
   modal.addEventListener('click', e => { if (e.target === modal) closeBuy(); });
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeBuy(); });
-  $('fQty').addEventListener('input', () => $('fTotal').textContent = priceNow());
+  $('fQty').addEventListener('input', () => { $('fTotal').textContent = priceNow(); breakNow(); });
 
   function showResult(ok, reference, msg){
     $('buyFormWrap').hidden = true; $('paySuccess').hidden = false;
@@ -105,12 +122,14 @@
     if (!ref) return toast('Please use your marketer\u2019s referral link to buy.');
     if (!window.PaystackPop) return toast('Payment service failed to load. Refresh and try again.');
     const qty = Math.max(1, Math.min(50, parseInt($('fQty').value, 10) || 1));
+    if (fState && fLga && (!fState.value || !fLga.value)) return toast('Please select your delivery state and local government.');
     const o = { name: $('fName').value.trim(), email: $('fEmail').value.trim(), phone: $('fPhone').value.trim(), qty, ref,
+      state: fState ? fState.value : '', lga: fLga ? fLga.value : '',
       reference: 'LBDN-' + ref + '-' + Date.now().toString(36).toUpperCase() };
     $('payBtn').disabled = true;
     PaystackPop.setup({
-      key: C.PAYSTACK_PUBLIC_KEY, email: o.email, amount: qty * C.PRICE * 100, currency: 'NGN', ref: o.reference,
-      metadata: { custom_fields: [{ display_name: 'Referral Code', variable_name: 'referral_code', value: ref }, { display_name: 'Quantity', variable_name: 'qty', value: qty }] },
+      key: C.PAYSTACK_PUBLIC_KEY, email: o.email, amount: qty * (C.PRICE + (C.SHIPPING || 0)) * 100, currency: 'NGN', ref: o.reference,
+      metadata: { custom_fields: [{ display_name: 'Referral Code', variable_name: 'referral_code', value: ref }, { display_name: 'Quantity', variable_name: 'qty', value: qty }, { display_name: 'Delivery', variable_name: 'delivery_location', value: (o.state || '—') + ' / ' + (o.lga || '—') }] },
       callback: () => {
         // Server verifies with Paystack before recording
         api('order', o).then(r => r.ok ? showResult(true, o.reference)
@@ -129,7 +148,7 @@
   if (!$('loginForm')) return; // not the admin page
   const fmt = n => '₦' + Number(n).toLocaleString('en-NG');
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  let t, orders = [];
+  let t, orders = [], lastData = null;
   const toast = m => { const e = $('toast'); e.textContent = m; e.classList.add('show'); clearTimeout(t); t = setTimeout(() => e.classList.remove('show'), 2600); };
   const tok = () => sessionStorage.getItem('lbdn_tok') || '';
   const api = (action, data = {}) => fetch(C.API_URL, { method: 'POST', body: JSON.stringify({ action, token: tok(), ...data }) }).then(r => r.json());
@@ -177,27 +196,99 @@
   async function loadData_(){
     const r = await api('data');
     if (!r.ok){ sessionStorage.removeItem('lbdn_tok'); show(false); if (r.error && r.error !== 'Not signed in') toast(r.error); return; }
-    show(true); const admin = r.role === 'admin'; orders = r.orders;
+    show(true); const admin = r.role === 'admin'; orders = r.orders; lastData = r;
     document.querySelectorAll('.admin-only').forEach(e => e.hidden = !admin);
     document.querySelectorAll('.mkt-only').forEach(e => e.hidden = admin);
     $('dashTitle').textContent = admin ? 'Admin Dashboard' : 'My Referral Dashboard';
     $('who').textContent = 'Signed in as ' + r.username + (admin ? ' (admin)' : ' (marketer)');
-    $('sClicks').textContent = r.clicks; $('sSold').textContent = r.sold; $('sRev').textContent = fmt(r.revenue);
-    $('sTop').textContent = admin ? r.top : r.code; $('sTopL').textContent = admin ? 'Top marketer' : 'Your code';
-    if (!admin) $('myLink').value = link(r.code);
-    $('mBody').innerHTML = r.marketers.length ? r.marketers.map(m => `<tr><td><strong>${esc(m.name)}</strong></td><td><code>${esc(m.code)}</code></td>
+    $('sClicks').textContent = r.clicks;
+    $('sSold').textContent = admin ? r.sold : r.monthBooks;
+    $('sSoldL').textContent = admin ? 'Books sold' : 'Books sold · this month';
+    $('sRev').textContent = fmt(admin ? r.revenue : r.commission);
+    $('sRevL').textContent = admin ? 'Revenue' : 'Commission earned · this month';
+    $('sTop').textContent = admin ? r.top : fmt(r.allTime ? r.allTime.amount : 0);
+    $('sTopL').textContent = admin ? 'Top marketer' : 'Commission · all time';
+    $('sTop').style.fontSize = admin ? '19px' : '';
+    const revCard = $('sRev').closest('.stat'), revSub = $('sRevSub');
+    if (revCard) revCard.classList.toggle('commission', !admin);
+    if (revSub){ revSub.hidden = !!admin; revSub.textContent = admin ? '' : 'at ' + fmt(r.rate || 0) + ' per book'; }
+    if (!admin){
+      $('myLink').value = link(r.code);
+      const ts = $('tierStrip');
+      if (ts){ ts.hidden = false; ts.innerHTML = tierStripHtml(r.monthBooks || 0, r.tier); }
+    }
+    $('mBody').innerHTML = r.marketers.length ? r.marketers.map(m => `<tr><td><button class="mlink" data-mk="${esc(m.code)}" type="button" title="View details">${esc(m.name)}</button></td><td><code>${esc(m.code)}</code></td>
       <td class="link-cell" title="${esc(link(m.code))}">${esc(link(m.code))}</td><td>${m.clicks}</td><td>${m.sold}</td><td>${fmt(m.revenue)}</td>
       <td><div class="acts"><button class="mini" data-copy="${esc(m.code)}">Copy link</button><button class="mini" data-reset="${esc(m.code)}">Reset password</button><button class="mini danger" data-del="${esc(m.code)}">✕</button></div></td></tr>`).join('')
       : '<tr><td colspan="7" class="empty">No marketers yet.</td></tr>';
-    $('oHead').innerHTML = admin ? '<tr><th>Date</th><th>Buyer</th><th>Qty</th><th>Amount</th><th>Referral</th><th>Reference</th><th>Status</th></tr>' : '<tr><th>Date</th><th>Buyer</th><th>Qty</th><th>Amount</th><th>Status</th></tr>';
+    $('oHead').innerHTML = admin ? '<tr><th>Date</th><th>Buyer</th><th>Qty</th><th>Amount</th><th>Referral</th><th>Reference</th><th>Status</th></tr>' : '<tr><th>Date</th><th>Buyer</th><th>Qty</th><th>Amount</th><th>Commission</th><th>Status</th></tr>';
     $('oTitle').textContent = admin ? 'Recent orders' : 'Your sales';
-    const cols = admin ? 7 : 5;
+    const cols = admin ? 7 : 6;
     $('oBody').innerHTML = r.orders.length ? r.orders.map(o => admin
-      ? `<tr><td>${new Date(o.ts).toLocaleString()}</td><td>${esc(o.name)}<br><span class="tiny dimmed">${esc(o.email)}</span></td><td>${o.qty}</td><td>${fmt(o.amount)}</td><td><code>${esc(o.ref)}</code></td><td class="link-cell">${esc(o.reference)}</td><td>${esc(o.status)}</td></tr>`
-      : `<tr><td>${new Date(o.ts).toLocaleDateString()}</td><td>${esc(o.name)}</td><td>${o.qty}</td><td>${fmt(o.amount)}</td><td>${esc(o.status)}</td></tr>`).join('')
+      ? `<tr><td>${new Date(o.ts).toLocaleString()}</td><td>${esc(o.name)}<br><span class="tiny dimmed">${esc(o.email)}</span>${o.state ? `<br><span class="tiny dimmed">${esc(o.state)} · ${esc(o.lga)}</span>` : ''}</td><td>${o.qty}</td><td>${fmt(o.amount)}</td><td><code>${esc(o.ref)}</code></td><td class="link-cell">${esc(o.reference)}</td><td>${esc(o.status)}</td></tr>`
+      : `<tr><td>${new Date(o.ts).toLocaleDateString()}</td><td>${esc(o.name)}${o.state ? `<br><span class="tiny dimmed">${esc(o.state)} · ${esc(o.lga)}</span>` : ''}</td><td>${o.qty}</td><td>${fmt(o.amount)}</td><td>${o.status === 'Failed' ? '—' : fmt(o.comm || 0)}</td><td>${esc(o.status)}</td></tr>`).join('')
       : `<tr><td colspan="${cols}" class="empty">No orders yet.</td></tr>`;
+    if (!admin && r.needsProfile) openOb(r);
     return r;
   }
+  /* tier progress strip (marketer dashboard + admin drill-down) */
+  const naira = n => '₦' + Number(n || 0).toLocaleString('en-NG');
+  const tierStripHtml = (books, t) => { if (!t) return '';
+    const pct = Math.min(100, Math.round(books / t.tierBooks * 100)), left = Math.max(0, t.tierBooks - books);
+    return `<div class="bar"><i style="width:${pct}%"></i></div><p><strong>${naira(left ? t.base : t.tierRate)}/book</strong> · ${books} of ${t.tierBooks} books this month · ` +
+      (left ? `sell <strong>${left}</strong> more to unlock ${naira(t.tierRate)}/book`
+            : `<strong>top tier unlocked</strong> — the whole month pays ${naira(t.tierRate)}/book`) + '. Resets every month.</p>';
+  };
+
+  /* ---- onboarding: payout details, prompted after first login ---- */
+  const openOb = d => { const p = (d && d.profile) || {};
+    $('obEmail').value = p.email || ''; $('obPhone').value = p.phone || '';
+    $('obBank').value = p.bank || ''; $('obAcct').value = p.accountNumber || '';
+    $('obAcctName').value = p.accountName || (d && d.username) || '';
+    $('obModal').hidden = false; };
+  $('obSkip').onclick = () => { $('obModal').hidden = true; };
+  $('obForm').addEventListener('submit', async e => { e.preventDefault();
+    const b = $('obSave'); b.disabled = true;
+    try { const r = await api('updateProfile', { email: $('obEmail').value.trim(), phone: $('obPhone').value.trim(),
+        bank: $('obBank').value.trim(), accountNumber: $('obAcct').value.trim(), accountName: $('obAcctName').value.trim() });
+      if (r.ok){ $('obModal').hidden = true; if (lastData){ lastData.needsProfile = false; lastData.profile = r.profile; } toast('Payout details saved ✓'); }
+      else toast(r.error);
+    } catch (err) { toast('Could not reach server'); }
+    b.disabled = false; });
+
+  /* ---- admin: marketer drill-down modal ---- */
+  let mkCode = null;
+  async function openMk(code){
+    mkCode = code; $('mkModal').hidden = false;
+    $('mkName').textContent = '…'; $('mkMeta').textContent = code;
+    $('mkStats').innerHTML = ''; $('mkTier').innerHTML = '';
+    let d; try { d = await api('marketerDetails', { code }); } catch (e) { d = { ok:false, error:'No connection' }; }
+    if (!d.ok){ toast(d.error || 'Could not load details'); $('mkModal').hidden = true; mkCode = null; return; }
+    if (mkCode !== code) return;
+    $('mkName').textContent = d.name;
+    $('mkMeta').textContent = 'Code ' + d.code + (d.active ? '' : ' · deactivated');
+    [['Books · this month', d.month.books], ['Earnings · this month', naira(d.month.amount)], ['Rate / book now', naira(d.month.rate)],
+     ['Books all-time', d.allTime.books], ['Earnings all-time', naira(d.allTime.amount)], ['Revenue all-time', naira(d.allTime.revenue)],
+     ['Referral clicks', d.clicks], ['Payouts recorded', d.payouts.length]]
+      .forEach(([l, v]) => { const c = document.createElement('div'); c.className = 'cell'; c.innerHTML = `<b>${v}</b><span>${l}</span>`; $('mkStats').appendChild(c); });
+    $('mkTier').innerHTML = tierStripHtml(d.month.books, d.tier);
+    const p = d.profile;
+    $('mkProfile').innerHTML = p
+      ? [['Email', p.email], ['Phone', p.phone], ['Bank', p.bank], ['Account number', p.accountNumber], ['Account name', p.accountName], ['Updated', p.updatedAt ? new Date(p.updatedAt).toLocaleDateString() : '']]
+        .map(([l, v]) => `<div><span>${l}</span><b>${esc(v || '—')}</b></div>`).join('')
+      : '<div><span>Payout account</span><b>No details on file yet — onboarding not completed.</b></div>';
+    $('mkHist').innerHTML = d.history.length ? d.history.map(h => `<tr><td>${esc(h.month)}</td><td>${h.books}</td><td>${naira(h.rate)}</td><td><strong>${naira(h.amount)}</strong></td></tr>`).join('')
+      : '<tr><td colspan="4" class="empty">No sales yet.</td></tr>';
+    $('mkPayouts').innerHTML = d.payouts.length ? d.payouts.map(x => `<div class="po-row"><span>${esc(x.month)}</span><b>${x.books} books · ${naira(x.amount)}</b><span class="tiny dimmed">by ${esc(x.markedBy)}</span></div>`).join('')
+      : '<p class="tiny dimmed" style="margin:4px 0 0">Nothing marked paid yet.</p>';
+    $('mkPaid').disabled = !d.active || !d.month.books;
+  }
+  $('mkClose').onclick = () => { $('mkModal').hidden = true; mkCode = null; };
+  $('mkPaid').onclick = async () => { if (!mkCode) return;
+    if (!confirm('Mark ' + mkCode + ' paid for this month?')) return;
+    const r = await api('markPaid', { code: mkCode });
+    if (r.ok){ toast('Marked paid: ' + r.books + ' books · ' + fmt(r.amount) + ' ✓'); openMk(mkCode); load(); } else toast(r.error); };
+  document.addEventListener('keydown', e => { if (e.key === 'Escape'){ $('mkModal').hidden = true; $('obModal').hidden = true; } });
   /* busy wrapper: golden sheen on panels, tables dim, refresh icon spins */
   let busyDepth = 0;
   async function load(){
@@ -236,6 +327,7 @@
     await Promise.all([stepsDone, dataDone]);
     hideOverlay(); staggerIn();
     if (r.temp){ $('pwPanel').hidden = false; toast('Please set your own password'); } else toast('Welcome back ✓');
+    if (lastData && lastData.role === 'marketer' && lastData.needsProfile) openOb(lastData);
     btn.innerHTML = orig; btn.disabled = false; signingIn = false; });
   $('logout').onclick = async () => { try { await api('logout'); } catch (e) {} sessionStorage.removeItem('lbdn_tok'); $('credBox').hidden = true; show(false); };
   $('refresh').onclick = () => load().then(() => toast('Refreshed'));
@@ -248,16 +340,24 @@
   $('credCopy').onclick = () => copy($('credText').textContent, 'Message copied ✓');
   $('myCopy').onclick = () => copy($('myLink').value, 'Link copied ✓');
   $('mBody').addEventListener('click', async e => {
-    const c = e.target.dataset.copy, d = e.target.dataset.del, rs = e.target.dataset.reset;
+    const c = e.target.dataset.copy, d = e.target.dataset.del, rs = e.target.dataset.reset, mk = e.target.dataset.mk;
+    if (mk) return openMk(mk);
     if (c) copy(link(c), 'Link copied ✓');
     if (rs && confirm('Reset the password for ' + rs + '?')){ const r = await api('resetPassword', { code: rs }); r.ok ? creds(r, true) : toast(r.error); }
     if (d && confirm('Remove marketer ' + d + '? Their link and login stop working; past sales stay in the Sheet.')){ await api('deleteMarketer', { code: d }); load(); }
   });
+  $('reverify').onclick = async () => { const b = $('reverify'); b.disabled = true;
+    try { const r = await api('reverify');
+      if (r.ok){ toast('Checked ' + r.checked + ' · confirmed ' + r.paid + (r.stillPending ? ' · ' + r.stillPending + ' still pending' : '')); if (r.checked) load(); }
+      else toast(r.error);
+    } catch (e) { toast('Could not reach server'); }
+    b.disabled = false; };
   $('csv').onclick = () => { if (!orders.length) return toast('No orders yet');
-    const rows = orders.map(o => [new Date(o.ts).toLocaleString(), o.name, o.email, o.phone, o.qty, o.amount, o.ref, o.reference, o.status].map(v => '"' + String(v ?? '').replace(/"/g,'""') + '"').join(','));
-    const a = document.createElement('a'); a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent('Date,Name,Email,Phone,Qty,Amount,Referral,Reference,Status\n' + rows.join('\n')); a.download = 'lbdn-orders.csv'; a.click(); };
+    const rows = orders.map(o => [new Date(o.ts).toLocaleString(), o.name, o.email, o.phone, o.qty, o.amount, o.ref, o.reference, o.status, o.state, o.lga].map(v => '"' + String(v ?? '').replace(/"/g,'""') + '"').join(','));
+    const a = document.createElement('a'); a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent('Date,Name,Email,Phone,Qty,Amount,Referral,Reference,Status,State,LGA\n' + rows.join('\n')); a.download = 'lbdn-orders.csv'; a.click(); };
   if (tok()){
     const p = load().catch(() => {});
-    Promise.all([p, runSteps('Restoring your session', 'Checking your saved sign-in', true)]).then(() => { hideOverlay(); if (!$('dash').hidden) staggerIn(); });
+    Promise.all([p, runSteps('Restoring your session', 'Checking your saved sign-in', true)]).then(() => { hideOverlay(); if (!$('dash').hidden) staggerIn();
+      if (lastData && lastData.role === 'marketer' && lastData.needsProfile) openOb(lastData); });
   } else show(false);
 })();

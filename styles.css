@@ -491,3 +491,63 @@ html[data-theme="light"] .mini:hover{border-color:var(--gold-deep);color:#9a5b00
 html[data-theme="light"] .link-cell{color:#6b7280}
 html[data-theme="light"] .empty{color:#9c8c6a}
 html[data-theme="light"] .cred{background:#fdf7ea;border-color:#e5d3a1;color:#3a2200}
+
+/* ================= v7 — tier strip, onboarding + marketer-detail modals ================= */
+.mlink{background:none;border:none;padding:0;color:var(--gold);font:inherit;font-weight:600;cursor:pointer;text-decoration:underline dotted rgba(242,178,62,.5);text-underline-offset:3px}
+.mlink:hover{color:var(--gold-soft)}
+.tier-strip{margin-top:14px}
+.tier-strip .bar{height:6px;border-radius:999px;background:rgba(242,178,62,.15);overflow:hidden;margin-bottom:9px}
+.tier-strip .bar i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--gold-deep),var(--gold));transition:width .6s ease}
+.tier-strip p{margin:0;font-size:12.5px;line-height:1.6;color:var(--muted)}
+.tier-strip strong{color:var(--gold);font-weight:600}
+.ovl{position:fixed;inset:0;z-index:70;display:grid;place-items:center;padding:20px;background:rgba(7,11,20,.66);backdrop-filter:blur(5px)}
+.mbox{width:min(560px,100%);max-height:88vh;overflow:auto;background:var(--ink2);border:1px solid rgba(242,178,62,.35);border-radius:16px;padding:26px;box-shadow:0 30px 80px rgba(0,0,0,.5)}
+.mbox h3{color:var(--gold-soft);font-size:20px;margin:0 0 6px}
+.mbox form{display:grid;gap:10px;margin-top:16px}
+.mbox input{font-family:'Inter';font-size:15px;padding:12px 14px;border-radius:10px;border:1.5px solid rgba(255,255,255,.15);background:rgba(255,255,255,.06);color:#fff;outline:none;width:100%;box-sizing:border-box}
+.mbox input:focus{border-color:var(--gold)}
+.mbox .skip{background:none;border:none;color:var(--muted);cursor:pointer;margin:14px auto 0;display:block;text-decoration:underline;font-family:'Inter'}
+.mk-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;margin-bottom:16px}
+.mk-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:6px}
+.mk-stats .cell{border:1px solid rgba(242,178,62,.18);border-radius:10px;padding:10px 12px;background:rgba(255,255,255,.03)}
+.mk-stats .cell b{display:block;font-family:'Playfair Display',Georgia,'Times New Roman',serif;font-size:16.5px;color:var(--gold);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mk-stats .cell span{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--muted)}
+.mk-sec{margin-top:18px}
+.mk-sec h4{margin:0 0 10px;font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--gold)}
+.mk-profile{display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;font-size:13.5px}
+.mk-profile div span{display:block;font-size:10.5px;letter-spacing:1px;text-transform:uppercase;color:var(--muted)}
+.mk-profile div b{font-weight:500;color:#fff8ec;word-break:break-word}
+.po-row{display:flex;justify-content:space-between;gap:10px;padding:8px 2px;border-bottom:1px dashed rgba(242,178,62,.2);font-size:13px;align-items:baseline;flex-wrap:wrap}
+.mk-actions{margin-top:20px;display:flex;justify-content:flex-end;gap:10px}
+html[data-theme="light"] .mbox{background:#fffaf0;border-color:#e5d3a1;box-shadow:0 30px 80px rgba(120,70,0,.25)}
+html[data-theme="light"] .mbox input{background:#fff;border-color:#e0d5bd;color:#101828}
+html[data-theme="light"] .mbox input:focus{border-color:var(--gold-deep)}
+html[data-theme="light"] .mk-stats .cell{background:#fff4df;border-color:#eadfc6}
+html[data-theme="light"] .mk-profile div b{color:#241a06}
+html[data-theme="light"] .po-row{border-bottom-color:#e5d3a1}
+html[data-theme="light"] .tier-strip .bar{background:rgba(190,120,10,.15)}
+@media (max-width:640px){.mk-stats{grid-template-columns:repeat(2,1fr)}.mk-profile{grid-template-columns:1fr}.mbox{padding:20px}}
+/* v7 polish: modal tables fit their box; readable headings in day theme */
+.mbox .table-scroll table{min-width:0;width:100%}
+.mbox table th,.mbox table td{white-space:nowrap}
+html[data-theme="light"] .mbox h3{color:#9a5b00}
+/* v8 — dedicated "Commission earned" card on the My Referral Dashboard */
+.stat .sub{font-size:12px;font-weight:600;color:var(--gold);margin-top:5px;letter-spacing:.2px}
+.stat.commission{border-color:rgba(242,178,62,.5);background:linear-gradient(150deg,rgba(242,178,62,.16),rgba(242,178,62,.03) 55%),var(--card-dark);box-shadow:inset 0 0 0 1px rgba(242,178,62,.12),0 10px 26px rgba(242,178,62,.1)}
+.stat.commission .v{font-size:30px;text-shadow:0 0 24px rgba(242,178,62,.28)}
+.stat.commission .l{color:rgba(255,227,173,.85)}
+html[data-theme="light"] .stat.commission{background:linear-gradient(150deg,#fff2d2,#fffcf3 62%);border-color:#e8c877;box-shadow:0 10px 26px rgba(190,120,10,.15)}
+html[data-theme="light"] .stat.commission .v{color:#a05e00;text-shadow:none}
+html[data-theme="light"] .stat.commission .l{color:#8a6a33}
+html[data-theme="light"] .stat .sub{color:#a06500}
+@media (max-width:640px){.stat.commission .v{font-size:26px}}
+/* v9 — checkout: state + LGA delivery selection, price breakdown */
+.loc-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.modal select{font-family:'Inter';font-size:16px;padding:12px 14px;border:1.5px solid #e5e0d4;border-radius:10px;outline:none;background:#fff;color:#111827;width:100%;box-sizing:border-box}
+.modal select:focus{border-color:var(--gold)}
+.modal select:disabled{opacity:.55;cursor:not-allowed}
+.sum-line{margin:-2px 4px 10px;text-align:right;font-size:12px}
+html[data-theme="dark"] .modal select{background:#0f1626;color:#fff;border-color:rgba(255,214,140,.25)}
+html[data-theme="dark"] .modal select:disabled{opacity:.4}
+html[data-theme="dark"] .sum-line{color:rgba(255,248,236,.55)}
+@media (max-width:480px){.loc-row{grid-template-columns:1fr}}
