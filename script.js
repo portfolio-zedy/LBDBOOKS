@@ -69,7 +69,7 @@
   const qtyNow = () => Math.max(1, +$('fQty').value || 1);
   const priceNow = () => fmt(unit() * qtyNow());
   const breakNow = () => { const q = qtyNow(); const b = $('fBreak');
-    if (b) b.textContent = fmt(C.PRICE) + ' × ' + q + (q > 1 ? ' copies' : ' copy') + ' + ' + fmt(C.SHIPPING || 0) + ' delivery × ' + q; };
+    if (b) b.textContent = fmt(C.PRICE) + ' × ' + q + (q > 1 ? ' copies' : ' copy') + (C.SHIPPING ? ' + ' + fmt(C.SHIPPING) + ' delivery × ' + q : ''); };
   function showRef(name){
     document.querySelectorAll('.price-text').forEach(e => e.textContent = fmt(C.PRICE));
     $('ctaDirect').hidden = true; $('ctaRef').hidden = false; $('stickyBuy').hidden = false;
@@ -77,12 +77,13 @@
     document.body.style.paddingBottom = '64px';
   }
   (async function initRef(){
-    const code = (new URLSearchParams(location.search).get('ref') || localStorage.getItem('lbdn_ref') || '').trim().toUpperCase();
+    const store = { get: k => { try { return localStorage.getItem(k); } catch (e) { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} }, del: k => { try { localStorage.removeItem(k); } catch (e) {} } };
+    const code = (new URLSearchParams(location.search).get('ref') || store.get('lbdn_ref') || '').trim().toUpperCase();
     if (!code) return;
     try {
       const r = await api('validateRef', { code });
-      if (!r.ok){ localStorage.removeItem('lbdn_ref'); return; }
-      ref = code; localStorage.setItem('lbdn_ref', code); showRef(r.name);
+      if (!r.ok){ store.del('lbdn_ref'); return; }
+      ref = code; store.set('lbdn_ref', code); showRef(r.name);
       if (!sessionStorage.getItem('lbdn_clicked_' + code)){ sessionStorage.setItem('lbdn_clicked_' + code, '1'); api('click', { code }); }
     } catch (e) { /* offline: leave direct view */ }
   })();
@@ -98,7 +99,7 @@
     });
   }
   const modalSub = $('modalSub');
-  if (modalSub) modalSub.textContent = 'The Architecture of Influence · ' + fmt(C.PRICE) + ' + ' + fmt(C.SHIPPING || 0) + ' delivery per copy';
+  if (modalSub) modalSub.textContent = 'The Architecture of Influence · ' + fmt(C.PRICE) + ' per copy' + (C.SHIPPING ? ' + ' + fmt(C.SHIPPING) + ' delivery' : '');
 
   /* ---- Buy flow ---- */
   const modal = $('buyModal');
@@ -226,7 +227,7 @@
     const cols = admin ? 7 : 6;
     $('oBody').innerHTML = r.orders.length ? r.orders.map(o => admin
       ? `<tr><td>${new Date(o.ts).toLocaleString()}</td><td>${esc(o.name)}<br><span class="tiny dimmed">${esc(o.email)}</span>${o.state ? `<br><span class="tiny dimmed">${esc(o.state)} · ${esc(o.lga)}</span>` : ''}</td><td>${o.qty}</td><td>${fmt(o.amount)}</td><td><code>${esc(o.ref)}</code></td><td class="link-cell">${esc(o.reference)}</td><td>${esc(o.status)}</td></tr>`
-      : `<tr><td>${new Date(o.ts).toLocaleDateString()}</td><td>${esc(o.name)}${o.state ? `<br><span class="tiny dimmed">${esc(o.state)} · ${esc(o.lga)}</span>` : ''}</td><td>${o.qty}</td><td>${fmt(o.amount)}</td><td>${o.status === 'Failed' ? '—' : fmt(o.comm || 0)}</td><td>${esc(o.status)}</td></tr>`).join('')
+      : `<tr><td>${new Date(o.ts).toLocaleDateString()}</td><td>${esc(o.name)}${o.state ? `<br><span class="tiny dimmed">${esc(o.state)} · ${esc(o.lga)}</span>` : ''}</td><td>${o.qty}</td><td>${fmt(o.amount)}</td><td>${o.status === 'Paid' ? fmt(o.comm || 0) : '—'}</td><td>${esc(o.status)}</td></tr>`).join('')
       : `<tr><td colspan="${cols}" class="empty">No orders yet.</td></tr>`;
     if (!admin && r.needsProfile) openOb(r);
     return r;
